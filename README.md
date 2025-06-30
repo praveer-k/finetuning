@@ -12,3 +12,10 @@ cd ../finetuning
 llama-server -m ~/models/
 ```
 https://llama-cpp-python.readthedocs.io/en/latest/install/macos/
+
+https://www.oecd.org/content/dam/oecd/en/publications/reports/2022/01/oecd-transfer-pricing-guidelines-for-multinational-enterprises-and-tax-administrations-2022_57104b3a/0e655865-en.pdf
+
+https://artificialintelligenceact.eu/wp-content/uploads/2021/08/The-AI-Act.pdf
+
+https://nvlpubs.nist.gov/nistpubs/ai/nist.ai.100-1.pdf
+
