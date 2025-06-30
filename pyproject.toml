@@ -1,0 +1,23 @@
+[project]
+name = "finetuning"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "accelerate>=1.8.1",
+    "datasets>=3.6.0",
+    "gguf>=0.10.0",
+    "ipykernel>=6.29.5",
+    "llama-cpp-python[server]>=0.3.9",
+    "pdfminer-six>=20250506",
+    "peft>=0.15.2",
+    "protobuf>=6.31.1",
+    "torch>=2.7.1",
+    "transformers>=4.53.0",
+]
+
+[tool.uv.workspace]
+members = [
+    "llama.cpp",
+]

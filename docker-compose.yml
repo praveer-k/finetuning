@@ -1,0 +1,9 @@
+services:
+  webui:
+    image: ghcr.io/open-webui/open-webui:main
+    ports:
+      - "3000:8080"
+    volumes:
+      - ./models:/app/backend/data
+    environment:
+      - extra_hosts=http://0.0.0.0:8000 
