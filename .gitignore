@@ -12,3 +12,5 @@ models/*
 .DS_Store
 tinyllama-finetuned/
 tinyllama-merged/
+chat_output*.json
+.env

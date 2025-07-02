@@ -19,3 +19,4 @@ https://artificialintelligenceact.eu/wp-content/uploads/2021/08/The-AI-Act.pdf
 
 https://nvlpubs.nist.gov/nistpubs/ai/nist.ai.100-1.pdf
 
+uv run format.py

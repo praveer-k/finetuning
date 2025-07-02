@@ -16,28 +16,6 @@ MERGED_DIR = "./tinyllama-merged"
 GGUF_OUTPUT = "./tinyllama-chat.gguf"
 MAX_LENGTH = 512
 
-def download_pdfs():
-    pdf_links = [
-        "https://www.oecd.org/content/dam/oecd/en/publications/reports/2022/01/oecd-transfer-pricing-guidelines-for-multinational-enterprises-and-tax-administrations-2022_57104b3a/0e655865-en.pdf",
-        "https://artificialintelligenceact.eu/wp-content/uploads/2021/08/The-AI-Act.pdf",
-        "https://nvlpubs.nist.gov/nistpubs/ai/nist.ai.100-1.pdf"
-    ]
-    if not os.path.exists(PDF_DIR):
-        os.makedirs(PDF_DIR)
-    for idx, url in enumerate(pdf_links, start=1):
-        try:
-            response = requests.get(url)
-            response.raise_for_status()
-            filename = url.split("/")[-1] or f"document_{idx}.pdf"
-            if not filename.endswith(".pdf"):
-                filename += ".pdf"
-            filepath = os.path.join(PDF_DIR, filename)
-            with open(filepath, "wb") as f:
-                f.write(response.content)
-            print(f"Downloaded: {filename}")
-        except requests.exceptions.RequestException as e:
-            print(f"Failed to download {url}: {e}")
-
 # === STEP 1: Extract text from PDFs ===
 def extract_text_from_pdfs(pdf_folder):
     texts = []
@@ -153,9 +131,7 @@ def convert_to_gguf(model_path, output_file):
         return False
 
 # === MAIN ===
-def main():
-    download_pdfs()
-    
+def load_dataset():
     # Ensure output directories exist
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     os.makedirs(MERGED_DIR, exist_ok=True)
@@ -205,7 +181,9 @@ def main():
         batched=True,
         remove_columns=dataset.column_names
     )
-    
+    return model, tokenizer, tokenized_dataset
+
+def main(model, tokenizer, tokenized_dataset):
     # Apply PEFT with LoRA
     print("Setting up LoRA configuration...")
     lora_config = LoraConfig(
@@ -286,4 +264,5 @@ def main():
         print(f"python convert_hf_to_gguf.py {MERGED_DIR} --outfile {GGUF_OUTPUT} --outtype f16")
 
 if __name__ == "__main__":
-    main()
+    model, tokenizer, tokenized_dataset = load_dataset()
+    main(model, tokenizer, tokenized_dataset)
