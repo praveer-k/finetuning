@@ -1,21 +1,27 @@
 import os
 import json
-import openai
+from pathlib import Path
+import re
 import requests
 import pdfplumber
+from openai import OpenAI
+from tqdm import tqdm
 from hashlib import sha256
 
 # === CONFIG ===
 PDF_DIR = "pdf_docs"
 
-openai.api_key = os.getenv("OPENAI_API_KEY")  # Or set directly
+client = OpenAI(
+    base_url = 'http://localhost:11434/v1',
+    api_key='ollama', # required, but unused
+)
 
 def extract_overlapping_chunks(pdf_path, overlap=1):
     """Extracts 2-page overlapping text chunks."""
     chunks = []
     with pdfplumber.open(pdf_path) as pdf:
         num_pages = len(pdf.pages)
-        for i in range(0, num_pages - 1):
+        for i in tqdm(range(0, num_pages - 1)):
             text1 = pdf.pages[i].extract_text() or ""
             text2 = pdf.pages[i + 1].extract_text() or ""
             combined = f"{text1.strip()}\n\n{text2.strip()}"
@@ -24,17 +30,19 @@ def extract_overlapping_chunks(pdf_path, overlap=1):
 
 def ask_openai_for_questions(text):
     prompt = (
-        "Based on the following document content, generate 3-5 concise, relevant questions that a user might ask to understand it better:\n\n"
+        "Based on the following document content, generate 3-5 concise, relevant questions that a user might ask to understand it better in json format:\n\n"
         f"{text[:3000]}"
     )
-    response = openai.ChatCompletion.create(
-        model="gpt-4",
+    response = client.chat.completions.create(
+        model="llama3.2",
         messages=[{"role": "user", "content": prompt}],
-        temperature=0.3,
-        max_tokens=400
+        temperature=0.3
     )
-    lines = response.choices[0].message["content"].split("\n")
-    questions = [line.strip("- ").strip() for line in lines if line.strip()]
+    pattern = r'```(.*?)```'
+    matches = re.findall(pattern, response.choices[0].message.content, re.DOTALL)
+    print(matches)
+    questions = json.loads(matches[0])
+    questions = [q["question"] for q in questions]
     return questions
 
 def ask_openai_to_answer(text, question):
@@ -42,13 +50,12 @@ def ask_openai_to_answer(text, question):
         {"role": "system", "content": "Answer only based on the provided document content."},
         {"role": "user", "content": f"Document:\n{text[:5000]}\n\nQuestion: {question}"}
     ]
-    response = openai.ChatCompletion.create(
-        model="gpt-4",
+    response = client.chat.completions.create(
+        model="llama3.2",
         messages=messages,
-        temperature=0,
-        max_tokens=800
+        temperature=0
     )
-    return response.choices[0].message["content"].strip()
+    return response.choices[0].message.content.strip()
 
 def generate_chat_data(pdf_path):
     chunks = extract_overlapping_chunks(pdf_path)
@@ -60,6 +67,7 @@ def generate_chat_data(pdf_path):
 
         try:
             questions = ask_openai_for_questions(text)
+            print(questions)
         except Exception as e:
             print(f"Error generating questions: {e}")
             continue
@@ -86,9 +94,13 @@ def download_pdfs(pdf_links):
         os.makedirs(PDF_DIR)
     for idx, url in enumerate(pdf_links, start=1):
         try:
+            filename = url.split("/")[-1] or f"document_{idx}.pdf"
+            pdf_path = os.path.join("./pdf_docs", filename)
+            if Path(pdf_path).exists():
+                print(f"File already exists {filename}")
+                continue
             response = requests.get(url)
             response.raise_for_status()
-            filename = url.split("/")[-1] or f"document_{idx}.pdf"
             if not filename.endswith(".pdf"):
                 filename += ".pdf"
             filepath = os.path.join(PDF_DIR, filename)
