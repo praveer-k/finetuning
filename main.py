@@ -359,5 +359,5 @@ def main(model, tokenizer, tokenized_dataset):
         print(f"python convert_hf_to_gguf.py {MERGED_DIR} --outfile {GGUF_OUTPUT} --outtype f16")
 
 if __name__ == "__main__":
-    model, tokenizer, tokenized_dataset = load_dataset("chat_output1.json")
+    model, tokenizer, tokenized_dataset = load_dataset("merged_conversations.json")
     main(model, tokenizer, tokenized_dataset)

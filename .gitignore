@@ -13,4 +13,7 @@ models/*
 tinyllama-finetuned/
 tinyllama-merged/
 chat_output*.json
+merged_conversations.json
 .env
+*.gguf
+

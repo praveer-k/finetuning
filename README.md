@@ -11,12 +11,14 @@ uv run python convert_hf_to_gguf.py ./tinyllama-merged --outfile ../finetuning/m
 cd ../finetuning
 llama-server -m ~/models/
 ```
-https://llama-cpp-python.readthedocs.io/en/latest/install/macos/
 
-https://www.oecd.org/content/dam/oecd/en/publications/reports/2022/01/oecd-transfer-pricing-guidelines-for-multinational-enterprises-and-tax-administrations-2022_57104b3a/0e655865-en.pdf
+CMAKE_ARGS="-DLLAMA_BLAS=ON -DLLAMA_BLAS_VENDOR=OpenBLAS" uv run pip install llama-cpp-python
+uv run huggingface-cli download TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf --local-dir . --local-dir-use-symlinks False
 
-https://artificialintelligenceact.eu/wp-content/uploads/2021/08/The-AI-Act.pdf
 
-https://nvlpubs.nist.gov/nistpubs/ai/nist.ai.100-1.pdf
-
+```bash
 uv run format.py
+uv run merge.py
+uv run main.py
+uv run test.py
+```

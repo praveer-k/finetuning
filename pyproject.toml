@@ -8,6 +8,7 @@ dependencies = [
     "accelerate>=1.8.1",
     "datasets>=3.6.0",
     "gguf>=0.10.0",
+    "huggingface-hub>=0.33.1",
     "ipykernel>=6.29.5",
     "llama-cpp-python[server]>=0.3.9",
     "openai>=1.93.0",
