@@ -16,23 +16,126 @@ MERGED_DIR = "./tinyllama-merged"
 GGUF_OUTPUT = "./tinyllama-chat.gguf"
 MAX_LENGTH = 512
 
-# === STEP 1: Extract text from PDFs ===
-def extract_text_from_pdfs(pdf_folder):
-    texts = []
-    for pdf_file in Path(pdf_folder).glob("*.pdf"):
-        print(f"Extracting {pdf_file}")
-        text = extract_text(str(pdf_file))
-        if text.strip():
-            # Format as chat template for better fine-tuning
-            formatted_text = f"<|user|>\nWhat can you tell me about this document?\n<|assistant|>\n{text.strip()}\n<|endoftext|>"
-            texts.append({"text": formatted_text})
-    return texts
+# === STEP 1: Load data from JSON file ===
+def load_json_dataset(json_file_path):
+    """
+    Load conversation data from a JSON file containing chat messages.
+    Expected format: List of dictionaries with 'role' and 'content' keys.
+    """
+    import json
+    from pathlib import Path
+    
+    with open(json_file_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    
+    print(f"Loaded {len(data)} messages from {json_file_path}")
+    return data
 
-# === STEP 2: Prepare Dataset ===
+# === STEP 2: Format conversations for training ===
+def format_conversations_for_training(json_data):
+    """
+    Convert JSON chat data into training format.
+    Groups consecutive user-assistant pairs into conversation threads.
+    """
+    formatted_texts = []
+    current_conversation = []
+    
+    for message in json_data:
+        if message["role"] == "user":
+            # If we have a complete conversation, save it
+            if current_conversation:
+                formatted_text = format_conversation_thread(current_conversation)
+                if formatted_text:
+                    formatted_texts.append({"text": formatted_text})
+            # Start new conversation
+            current_conversation = [message]
+        elif message["role"] == "assistant" and current_conversation:
+            # Add assistant response to current conversation
+            current_conversation.append(message)
+    
+    # Don't forget the last conversation
+    if current_conversation:
+        formatted_text = format_conversation_thread(current_conversation)
+        if formatted_text:
+            formatted_texts.append({"text": formatted_text})
+    
+    return formatted_texts
+
+def format_conversation_thread(conversation):
+    """
+    Format a single conversation thread into training format.
+    """
+    if len(conversation) < 2:
+        return None
+    
+    formatted_parts = []
+    for i in range(0, len(conversation), 2):
+        if i + 1 < len(conversation):
+            user_msg = conversation[i]
+            assistant_msg = conversation[i + 1]
+            
+            if user_msg["role"] == "user" and assistant_msg["role"] == "assistant":
+                formatted_parts.append(f"<|user|>\n{user_msg['content'].strip()}")
+                formatted_parts.append(f"<|assistant|>\n{assistant_msg['content'].strip()}")
+    
+    if formatted_parts:
+        return "\n".join(formatted_parts) + "\n<|endoftext|>"
+    return None
+
+# === STEP 3: Alternative format for single message pairs ===
+def format_individual_messages(json_data):
+    """
+    Format each user-assistant pair as individual training examples.
+    """
+    formatted_texts = []
+    
+    for i in range(0, len(json_data) - 1, 2):
+        if (i + 1 < len(json_data) and 
+            json_data[i]["role"] == "user" and 
+            json_data[i + 1]["role"] == "assistant"):
+            
+            user_content = json_data[i]["content"].strip()
+            assistant_content = json_data[i + 1]["content"].strip()
+            
+            formatted_text = f"<|user|>\n{user_content}\n<|assistant|>\n{assistant_content}\n<|endoftext|>"
+            formatted_texts.append({"text": formatted_text})
+    
+    return formatted_texts
+
+# === STEP 4: Prepare Dataset ===
 def prepare_dataset(text_data):
+    """
+    Convert formatted text data into a Dataset object.
+    """
+    from datasets import Dataset
     return Dataset.from_list(text_data)
 
-# === STEP 3: Tokenization Function ===
+# === STEP 5: Main function to process JSON file ===
+def process_json_to_dataset(json_file_path, format_type="conversations"):
+    """
+    Complete pipeline to process JSON file into training dataset.
+    
+    Args:
+        json_file_path: Path to JSON file containing chat data
+        format_type: "conversations" for multi-turn or "individual" for single pairs
+    """
+    # Load JSON data
+    json_data = load_json_dataset(json_file_path)
+    
+    # Format for training
+    if format_type == "conversations":
+        formatted_data = format_conversations_for_training(json_data)
+    else:
+        formatted_data = format_individual_messages(json_data)
+    
+    print(f"Created {len(formatted_data)} training examples")
+    
+    # Create dataset
+    dataset = prepare_dataset(formatted_data)
+    
+    return dataset
+
+# === STEP 6: Tokenization Function ===
 def tokenize_function(example, tokenizer):
     # Add pad token if it doesn't exist
     if tokenizer.pad_token is None:
@@ -46,7 +149,7 @@ def tokenize_function(example, tokenizer):
         return_tensors=None
     )
 
-# === STEP 4: Merge LoRA weights ===
+# === STEP 7: Merge LoRA weights ===
 def merge_lora_weights(base_model_name, lora_path, output_path):
     print("Loading base model...")
     tokenizer = AutoTokenizer.from_pretrained(base_model_name)
@@ -87,7 +190,7 @@ def merge_lora_weights(base_model_name, lora_path, output_path):
     
     return output_path
 
-# === STEP 5: Convert to GGUF ===
+# === STEP 8: Convert to GGUF ===
 def convert_to_gguf(model_path, output_file):
     print(f"Converting {model_path} to GGUF format...")
     
@@ -131,7 +234,7 @@ def convert_to_gguf(model_path, output_file):
         return False
 
 # === MAIN ===
-def load_dataset():
+def load_dataset(json_file):
     # Ensure output directories exist
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     os.makedirs(MERGED_DIR, exist_ok=True)
@@ -164,16 +267,8 @@ def load_dataset():
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
         tokenizer.pad_token_id = tokenizer.eos_token_id
-    
-    # Extract and tokenize data
-    print("Extracting text from PDFs...")
-    raw_data = extract_text_from_pdfs(PDF_DIR)
-    
-    if not raw_data:
-        print("No PDF data found. Please check your PDF_DIR path.")
-        return
-    
-    dataset = prepare_dataset(raw_data)
+       
+    dataset = process_json_to_dataset(json_file, format_type="conversations") # individual
     print(f"Dataset created with {len(dataset)} examples")
     
     tokenized_dataset = dataset.map(
@@ -264,5 +359,5 @@ def main(model, tokenizer, tokenized_dataset):
         print(f"python convert_hf_to_gguf.py {MERGED_DIR} --outfile {GGUF_OUTPUT} --outtype f16")
 
 if __name__ == "__main__":
-    model, tokenizer, tokenized_dataset = load_dataset()
+    model, tokenizer, tokenized_dataset = load_dataset("chat_output1.json")
     main(model, tokenizer, tokenized_dataset)

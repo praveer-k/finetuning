@@ -113,9 +113,13 @@ def download_pdfs(pdf_links):
 # Example usage
 if __name__ == "__main__":
     pdf_links = [
-        "https://www.oecd.org/content/dam/oecd/en/publications/reports/2022/01/oecd-transfer-pricing-guidelines-for-multinational-enterprises-and-tax-administrations-2022_57104b3a/0e655865-en.pdf",
+        "https://www.oecd.org/content/dam/oecd/en/publications/reports/2019/06/what-are-the-oecd-principles-on-ai_f5a9a903/6ff2a1c4-en.pdf",
+        "https://www.fsmb.org/siteassets/artificial-intelligence/pdfs/oecd-recommendation-on-ai-en.pdf",
         "https://artificialintelligenceact.eu/wp-content/uploads/2021/08/The-AI-Act.pdf",
-        "https://nvlpubs.nist.gov/nistpubs/ai/nist.ai.100-1.pdf"
+        "https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=OJ%3AL_202401689",
+        "https://www.twobirds.com/-/media/new-website-content/pdfs/capabilities/artificial-intelligence/european-union-artificial-intelligence-act-guide.pdf",
+        "https://nvlpubs.nist.gov/nistpubs/ai/nist.ai.100-1.pdf",
+        "https://nvlpubs.nist.gov/nistpubs/ai/NIST.AI.600-1.pdf"
     ]
     download_pdfs(pdf_links)
     for idx, url in enumerate(pdf_links, start=1):
