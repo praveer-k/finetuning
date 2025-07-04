@@ -64,12 +64,17 @@ def generate_chat_data(pdf_path):
 
     for chunk_index, text in enumerate(chunks):
         print(f"Processing chunk {chunk_index + 1} of {len(chunks)}...")
-
+        print("====>", text)
+        if text.strip() == "":
+            continue
         try:
             questions = ask_openai_for_questions(text)
             print(questions)
         except Exception as e:
+            print("="*50)
+            print(text)
             print(f"Error generating questions: {e}")
+            print("="*50)
             continue
 
         for question in questions:
@@ -92,14 +97,14 @@ def generate_chat_data(pdf_path):
 def download_pdfs(pdf_links):
     if not os.path.exists(PDF_DIR):
         os.makedirs(PDF_DIR)
-    for idx, url in enumerate(pdf_links, start=1):
+    for idx, link in enumerate(pdf_links, start=1):
         try:
-            filename = url.split("/")[-1] or f"document_{idx}.pdf"
+            filename = link["name"]
             pdf_path = os.path.join("./pdf_docs", filename)
             if Path(pdf_path).exists():
                 print(f"File already exists {filename}")
                 continue
-            response = requests.get(url)
+            response = requests.get(link["href"])
             response.raise_for_status()
             if not filename.endswith(".pdf"):
                 filename += ".pdf"
@@ -108,23 +113,22 @@ def download_pdfs(pdf_links):
                 f.write(response.content)
             print(f"Downloaded: {filename}")
         except requests.exceptions.RequestException as e:
-            print(f"Failed to download {url}: {e}")
+            print(f"Failed to download {link["href"]}: {e}")
 
 # Example usage
 if __name__ == "__main__":
     pdf_links = [
-        "https://www.oecd.org/content/dam/oecd/en/publications/reports/2019/06/what-are-the-oecd-principles-on-ai_f5a9a903/6ff2a1c4-en.pdf",
-        "https://www.fsmb.org/siteassets/artificial-intelligence/pdfs/oecd-recommendation-on-ai-en.pdf",
-        "https://artificialintelligenceact.eu/wp-content/uploads/2021/08/The-AI-Act.pdf",
-        "https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=OJ%3AL_202401689",
-        "https://www.twobirds.com/-/media/new-website-content/pdfs/capabilities/artificial-intelligence/european-union-artificial-intelligence-act-guide.pdf",
-        "https://nvlpubs.nist.gov/nistpubs/ai/nist.ai.100-1.pdf",
-        "https://nvlpubs.nist.gov/nistpubs/ai/NIST.AI.600-1.pdf"
+        {"href": "https://www.oecd.org/content/dam/oecd/en/publications/reports/2019/06/what-are-the-oecd-principles-on-ai_f5a9a903/6ff2a1c4-en.pdf", "name": "6ff2a1c4-en.pdf"},
+        {"href": "https://www.fsmb.org/siteassets/artificial-intelligence/pdfs/oecd-recommendation-on-ai-en.pdf", "name": "oecd-recommendation-on-ai-en.pdf"},
+        {"href": "https://artificialintelligenceact.eu/wp-content/uploads/2021/08/The-AI-Act.pdf", "name": "The-AI-Act.pdf"},
+        {"href": "https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=OJ%3AL_202401689", "name":"regulation_eu.pdf"},
+        {"href": "https://www.twobirds.com/-/media/new-website-content/pdfs/capabilities/artificial-intelligence/european-union-artificial-intelligence-act-guide.pdf", "name": "european-union-artificial-intelligence-act-guide.pdf"},
+        {"href": "https://nvlpubs.nist.gov/nistpubs/ai/nist.ai.100-1.pdf", "name": "nist.ai.100-1.pdf"},
+        {"href": "https://nvlpubs.nist.gov/nistpubs/ai/NIST.AI.600-1.pdf", "name": "NIST.AI.600-1.pdf"},
     ]
     download_pdfs(pdf_links)
-    for idx, url in enumerate(pdf_links, start=1):
-        filename = url.split("/")[-1] or f"document_{idx}.pdf"
-        pdf_path = os.path.join("./pdf_docs", filename)
+    for idx, link in enumerate(pdf_links, start=1):
+        pdf_path = os.path.join("./pdf_docs", link["name"])
         chat_data = generate_chat_data(pdf_path)
         with open(f"chat_output{idx}.json", "w") as f:
             json.dump(chat_data, f, indent=2)
